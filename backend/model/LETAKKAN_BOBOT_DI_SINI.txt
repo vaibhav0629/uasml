@@ -1,0 +1,2 @@
+Salin fold_0.weights.h5 ... fold_4.weights.h5 dari model_export.zip ke folder ini.
+(config.json dan labels.json sudah ada. model.weights.h5 lama TIDAK dipakai lagi.)

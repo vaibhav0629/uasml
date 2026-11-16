@@ -19,7 +19,7 @@ def predict(file):
     response = requests.post(
         f"{BACKEND_URL}/predict",
         files={"file": (file.name, file.getvalue(), file.type)},
-        timeout=60,
+        timeout=int(os.getenv("REQUEST_TIMEOUT", "300")),
     )
     response.raise_for_status()
     return response.json()["predictions"]

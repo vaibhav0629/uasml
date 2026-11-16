@@ -6,7 +6,8 @@ services:
     volumes:
       - ./backend/model:/app/model:ro
     environment:
-      MAX_SIDE: "1600"  # 0 = matikan pengecilan foto
+      MAX_SIDE: "0"  # 0 = foto penuh, sama dengan notebook
+      ENSEMBLE: "0"  # 0 = fold terbaik saja (cepat); 1 = 5 fold seperti notebook (akurat tapi ~5x lebih lambat)
 
   frontend:
     build: ./frontend
@@ -14,5 +15,6 @@ services:
       - "8501:8501"
     environment:
       BACKEND_URL: http://backend:8000
+      REQUEST_TIMEOUT: "300"  # detik; naikkan jika masih timeout
     depends_on:
       - backend

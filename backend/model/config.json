@@ -1,1 +1,36 @@
-{"model": "DenseNet121", "seed": 1, "input_size": [128, 512], "val_acc": 0.9578163771712159}
+{
+  "model": "DenseNet121",
+  "ensemble": "soft-voting",
+  "input_size": [
+    128,
+    512
+  ],
+  "folds": [
+    {
+      "file": "fold_0.weights.h5",
+      "seed": 0,
+      "val_acc": 0.9461206896551724
+    },
+    {
+      "file": "fold_1.weights.h5",
+      "seed": 1,
+      "val_acc": 0.9553349875930521
+    },
+    {
+      "file": "fold_2.weights.h5",
+      "seed": 2,
+      "val_acc": 0.950561797752809
+    },
+    {
+      "file": "fold_3.weights.h5",
+      "seed": 3,
+      "val_acc": 0.9170212765957447
+    },
+    {
+      "file": "fold_4.weights.h5",
+      "seed": 4,
+      "val_acc": 0.9452054794520548
+    }
+  ],
+  "val_acc_mean": 0.9428488462097666
+}
