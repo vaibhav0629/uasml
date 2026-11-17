@@ -7,6 +7,7 @@ services:
       - ./backend/model:/app/model:ro
     environment:
       MAX_SIDE: "0"  # 0 = foto penuh, sama dengan notebook
+      FLATTEN_MODE: "fast"  # fast (tercepat) | accurate (~identik, 3x lebih lambat dari fast) | exact (identik, paling lambat)
       ENSEMBLE: "0"  # 0 = fold terbaik saja (cepat); 1 = 5 fold seperti notebook (akurat tapi ~5x lebih lambat)
 
   frontend:

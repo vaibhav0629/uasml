@@ -1,10 +1,14 @@
 """Preprocessing inferensi. Port 1:1 dari notebook UAS_Handwriting_Classification.ipynb
 (bagian 2.8-2.10: flatten_background, remove_rules, clean_gray, find_lines, image_to_strip, windows_from_strip).
 
-Satu-satunya perbedaan: operasi close elips pada flatten_background memakai close_ellipse_exact,
-yang hasilnya IDENTIK bit-per-bit dengan cv2.morphologyEx tetapi jauh lebih cepat pada foto besar.
+Perbedaan dari notebook hanya pada flatten_background (estimasi latar belakang):
+1. close elips memakai close_ellipse_exact, hasilnya IDENTIK bit-per-bit dengan cv2.morphologyEx.
+2. Untuk foto besar (sisi pendek >= 1500 px) latar belakang (close + Gaussian blur sigma ~sisi/18) dihitung
+   pada resolusi lebih kecil lalu diperbesar lagi. Latar belakang itu halus, jadi selisihnya <= 1 level abu-abu
+   pada ~3% piksel. Set env BG_DOWNSCALE=1 untuk jalur persis notebook (lambat: ~10 detik untuk foto 12 MP).
 """
 import io
+import os
 
 import cv2
 import numpy as np
@@ -59,11 +63,46 @@ def _dilate(g, hw, r): return _pass(g, hw, r, np.maximum)
 def _erode(g, hw, r):  return _pass(g, hw, r, np.minimum)
 
 
+# Faktor pengecilan untuk estimasi latar belakang. "auto" = sesuaikan dengan ukuran foto,
+# "1" = jalur persis seperti notebook (lambat pada foto besar).
+BG_DOWNSCALE = os.getenv("BG_DOWNSCALE", "auto")
+BG_TARGET_SIDE = 750  # sisi pendek (piksel) yang dituju setelah pengecilan
+
+
+def _bg_scale(shape):
+    if BG_DOWNSCALE != "auto":
+        return max(1, int(BG_DOWNSCALE))
+    return max(1, min(shape) // BG_TARGET_SIDE)
+
+
+def _block_max(gray, s):
+    """Max-pooling s x s. Harus max (bukan rata-rata) agar statistik noise yang dipilih closing tetap sama."""
+    h, w = gray.shape
+    ph, pw = (-h) % s, (-w) % s
+    if ph or pw:
+        gray = np.pad(gray, ((0, ph), (0, pw)), mode="edge")
+    return gray.reshape(gray.shape[0] // s, s, gray.shape[1] // s, s).max(axis=3).max(axis=1)
+
+
+def estimate_background(gray, size, s):
+    """Latar belakang = close elips lalu Gaussian blur.
+    s == 1 : persis notebook.  s > 1 : dikerjakan pada resolusi s kali lebih kecil lalu diperbesar lagi
+    (latar belakang halus, jadi hampir tidak ada informasi yang hilang)."""
+    if s <= 1:
+        background = close_ellipse_exact(gray, size)
+        return cv2.GaussianBlur(background, (0, 0), size / 3)
+
+    h, w = gray.shape
+    low = close_ellipse_exact(_block_max(gray, s), max(3, (size // s) | 1))
+    low = cv2.GaussianBlur(low.astype(np.float32), (0, 0), size / 3 / s)
+    up = cv2.resize(low, (low.shape[1] * s, low.shape[0] * s), interpolation=cv2.INTER_LINEAR)[:h, :w]
+    return np.clip(np.rint(up), 0, 255).astype(np.uint8)
+
+
 def flatten_background(gray):
     gray = np.asarray(gray, dtype=np.uint8)
     size = max(15, (min(gray.shape) // 6) | 1)
-    background = close_ellipse_exact(gray, size)  # identik dengan cv2.morphologyEx(MORPH_CLOSE, ellipse), jauh lebih cepat
-    background = cv2.GaussianBlur(background, (0, 0), size / 3)
+    background = estimate_background(gray, size, _bg_scale(gray.shape))
     corrected = np.clip(gray.astype(np.float32) / np.maximum(background, 1) * 255, 0, 255)
     low, high = np.percentile(corrected, [1, 50])
     return (np.clip((corrected - low) / max(high - low, 1), 0, 1) * 255).astype(np.uint8)
